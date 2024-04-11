@@ -1,0 +1,327 @@
+---
+title: "Case Study"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.width=16, fig.height=8)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r library}
+library(readxl)
+```
+
+```{r cars}
+data1<-file.choose()
+data<-read_excel(data1)
+print(data)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r summary}
+summary(data)
+```
+```{r table}
+table(data$Age)
+```
+
+```{r table}
+table(data['Problems of bonding with baby'])
+```
+
+
+```{r table}
+table(data['Trouble sleeping at night'])
+```
+
+```{r library}
+library(ggplot2)
+```
+
+```{r}
+
+Age<-data$Age
+ggplot(data, aes(x = Age,fill=Age)) +
+  geom_bar() +
+  labs(title = "Frequency of Feeling sad or Tearful")
+
+```
+```{r}
+
+ggplot(data, aes(x = `Feeling sad or Tearful`,fill = `Feeling sad or Tearful`)) +
+  geom_bar() +
+  labs(title = "Frequency of Feeling sad or Tearful",fill = "Feeling sad or Tearful")
+
+```
+
+```{r }
+
+# Box plot of Trouble sleeping at night by Age group
+ggplot(data, aes(x = Age, y = `Trouble sleeping at night`,fill=`Suicide attempt`)) +
+  geom_boxplot() +
+  labs(title = "Trouble sleeping at night by Age group",fill="Suicide attempt")
+
+```
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+```{r}
+df_long <- data %>%
+  pivot_longer(cols = -Age)
+
+ggplot(df_long, aes(x = value, fill = value)) +
+  geom_bar(position = "dodge", color = "black") +
+  facet_wrap(~name, scales = "free") +
+  labs(title = "Frequency of Symptoms", x = "Presence", y = "Count", fill = "Presence") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+```{r}
+age_distribution <- table(data$Age)
+pie(age_distribution, labels = paste(names(age_distribution), ": ", age_distribution), main = "Age Distribution", col = rainbow(length(age_distribution)))
+
+```
+```{r}
+# Scatter plot of Feeling sad or Tearful vs. Feeling of guilt with colors
+ggplot(data, aes(x = `Feeling sad or Tearful`, y = `Trouble sleeping at night`, fill = `Feeling sad or Tearful`)) +
+  geom_boxplot() +
+  labs(title = "Trouble sleeping at night by Feeling sad or Tearful", x = "Feeling sad or Tearful", y = "Trouble sleeping at night", fill = "Feeling sad or Tearful")
+
+
+```
+```{r}
+dt = sort(sample(nrow(data), nrow(data)*.7))
+train<-data[dt,]
+test<-data[-dt,]
+```
+
+```{r}
+library(randomForest)
+library(e1071)
+
+# Assuming 'train' is your training dataset
+set.seed(123)
+
+# Ensure 'feeling_anxious' is extracted properly
+train$feeling_anxious <- train[["Feeling anxious"]]
+
+# Remove 'Feeling anxious' from train dataset
+train <- train[, -which(names(train) == "Feeling anxious")]
+
+train$feeling_anxious <- as.factor(train$feeling_anxious)
+
+# Check the levels of the factor variable
+levels(train$feeling_anxious)
+
+# Check for missing or NA values
+sum(is.na(train$feeling_anxious))
+# Create the random forest model
+svm_model <- svm(feeling_anxious ~ ., data = train, kernel = "radial")
+
+```
+
+```{r}
+
+test$feeling_anxious <- test[["Feeling anxious"]]
+
+# Remove 'Feeling anxious' from train dataset
+test <- test[, -which(names(test) == "Feeling anxious")]
+
+
+predictions <- predict(svm_model, newdata = test)
+accuracy <- mean(predictions == test$feeling_anxious)
+
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+print(paste("Accuracy", accuracy*100))
+TP <- sum(predictions == "Yes" & test$feeling_anxious == "Yes")
+FP <- sum(predictions == "Yes" & test$feeling_anxious == "No")
+FN <- sum(predictions == "No" & test$feeling_anxious == "Yes")
+
+# Calculate Precision, Recall, and F1 Score
+precision <- TP / (TP + FP)
+recall <- TP / (TP + FN)
+f1_score <- 2 * (precision * recall) / (precision + recall)
+
+# Print the metrics
+print(paste("Precision", precision*100))
+print(paste("Recall" , recall*100))
+print(paste("F1 score" ,f1_score*100))
+```
+
+```{r}
+# Load required libraries
+library(mlbench)
+library(class)
+
+# Load the Sonar dataset
+data(Sonar)
+
+# View the structure of the Sonar dataset
+# Separate features and target variable
+X <- Sonar[, 1:60]  # Features (all columns except the last one)
+y <- Sonar$Class  # Target variable
+
+# Split the data into training and testing sets
+set.seed(123)  # For reproducibility
+train_indices <- sample(1:nrow(X), 0.7 * nrow(X))  # 70% training, 30% testing
+X_train <- X[train_indices, ]
+y_train <- y[train_indices]
+X_test <- X[-train_indices, ]
+y_test <- y[-train_indices]
+
+# KNN model training
+# Let's use k = 3 (you can adjust k as needed)
+k <- 3
+model <- knn(train = X_train, test = X_test, cl = y_train, k = k)
+
+# Print the predictions
+accuracy <- sum(model == y_test) / length(y_test)
+print(paste("Accuracy:", round(accuracy * 100, 2), "%"))
+
+calculate_metrics <- function(actual, predicted, positive_class) {
+  # Compute confusion matrix
+  conf_mat <- table(Actual = actual, Predicted = predicted)
+
+  # Calculate precision
+  precision <- conf_mat[positive_class, positive_class] / sum(conf_mat[, positive_class])
+
+  # Calculate recall
+  recall <- conf_mat[positive_class, positive_class] / sum(conf_mat[positive_class, ])
+
+  # Calculate F1-score
+  f1_score <- 2 * precision * recall / (precision + recall)
+
+  # Return metrics
+  return(list(precision = precision, recall = recall, f1_score = f1_score))
+}
+
+# Usage example
+metrics <- calculate_metrics(y_test, model, positive_class = "M")
+
+# Print results
+print(paste("Precision:", round(metrics$precision * 100, 2), "%"))
+print(paste("Recall:", round(metrics$recall * 100, 2), "%"))
+print(paste("F1-score:", round(metrics$f1_score * 100, 2), "%"))
+
+
+```
+
+
+```{r}
+# Load required libraries
+library(mlbench)
+library(caret)
+
+# Load the Sonar dataset
+data(Sonar)
+
+# Convert the class labels to binary (1 for "Mine" and 0 for "Rock")
+Sonar$Class <- ifelse(Sonar$Class == "M", 1, 0)
+
+# Split data into train and test sets
+set.seed(123)
+trainIndex <- createDataPartition(Sonar$Class, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+data_train <- Sonar[trainIndex, ]
+data_test <- Sonar[-trainIndex, ]
+
+# Convert data to DMatrix
+dtrain <- xgb.DMatrix(data = as.matrix(data_train[, -ncol(data_train)]), 
+                      label = data_train$Class)
+dtest <- xgb.DMatrix(data = as.matrix(data_test[, -ncol(data_test)]))
+
+# Define parameters for XGBoost
+params <- list(
+  booster = "gbtree",
+  objective = "binary:logistic",
+  eval_metric = "logloss",
+  eta = 0.1,
+  max_depth = 6,
+  subsample = 0.8,
+  colsample_bytree = 0.8,
+  min_child_weight = 1,
+  gamma = 0
+)
+
+# Train the model
+xgb_model <- xgboost(params = params, data = dtrain, nrounds = 100, verbose = FALSE)
+
+# Make predictions
+pred <- predict(xgb_model, dtest)
+
+# Convert probabilities to binary predictions
+predictions <- ifelse(pred > 0.5, 1, 0)
+
+# Calculate accuracy
+accuracy <- sum(predictions == data_test$Class) / length(predictions)
+print(paste("Accuracy:", accuracy))
+
+# Calculate confusion matrix
+conf_matrix <- table(predictions, data_test$Class)
+print("Confusion Matrix:")
+print(conf_matrix)
+
+# Calculate precision, recall, and F1 score
+precision <- conf_matrix[2, 2] / sum(conf_matrix[, 2])
+recall <- conf_matrix[2, 2] / sum(conf_matrix[2, ])
+f1_score <- 2 * precision * recall / (precision + recall)
+
+print(paste("Precision:", precision*100))
+print(paste("Recall:", recall*100))
+print(paste("F1 Score:", f1_score*100))
+
+# ROC curve and AUC
+roc_obj <- roc(predictor = pred, response = data_test$Class)
+print(paste("AUC:", auc(roc_obj)*100))
+plot(roc_obj, main = "ROC Curve")
+```
+
+
+
+
+
+
+
+
+
+### Insights
+Based on the various model results provided, we can derive several insights and make recommendations:
+
+Accuracy, Precision, Recall, and F1 Score:
+
+Model 1: Accuracy of 82.48%, Precision of 86.80%, Recall of 87.09%, and F1 score of 86.94%.
+Model 2: Accuracy of 80.95%, Precision of 81.58%, Recall of 86.11%, and F1 score of 83.78%.
+Model 3: Accuracy of 90.24%, Precision of 87.50%, Recall of 95.45%, and F1 score of 91.30%.
+Significant Predictors:
+
+Model 3 stands out with the highest accuracy and precision, along with the highest recall and F1 score. This suggests that the predictors utilized in Model 3 are likely the most significant in predicting the outcome accurately.
+Recommendations:
+
+Model 3 should be further investigated to identify the key predictors that contribute to its superior performance. Understanding these predictors can provide valuable insights into the underlying factors influencing the outcome.
+Interventions or strategies based on the significant predictors identified by Model 3 can be developed to improve the outcome being predicted.
+Further research could involve exploring the relationships between the identified predictors and the outcome variable in more detail. This could include conducting qualitative studies or experiments to validate the predictive power of these factors.
+
+Model Evaluation:
+
+The confusion matrix provided for Model 3 shows promising results with a relatively low number of false positives (3) and false negatives (1), indicating good predictive performance.
+The high precision (87.50%) and recall (95.45%) of Model 3 suggest that it can effectively identify positive cases while minimizing false positives.
+Area Under the Curve (AUC):
+
+Model 3 also shows a high AUC of 92.65%, indicating excellent discrimination ability between positive and negative cases. This further supports the robustness of the model's predictive performance.
+In summary, Model 3 demonstrates superior predictive performance compared to the other models evaluated. Further investigation into the significant predictors identified by Model 3 can provide valuable insights for developing interventions or strategies to improve outcomes related to the predicted variable.
